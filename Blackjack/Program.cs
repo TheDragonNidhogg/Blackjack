@@ -816,10 +816,18 @@ namespace Blackjack
                                     {
                                         Console.Write(" <3>Split");
                                     }
-                                    Console.WriteLine(" <4>Double:");
+                                    else
+                                    {
+                                        Console.WriteLine(" <4>Double:");
+                                    }
+                                    
                                 }
                                 else
                                 {
+                                    if (players[i].CheckSplit())
+                                    {
+                                        Console.Write(" <3>Split");
+                                    }
                                     Console.WriteLine(":");
                                 }
 
