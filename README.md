@@ -8,6 +8,8 @@ This project is a game of Blackjack. Complete with Multiplayer, Splits, Betting,
 Project Created with:
 Microsoft Visual Studio Community 2019 Version 16.8.3
 
+## Programming Language:
+C#
 ## Setup
 To run this project, save the files to your PC. 
 Go to folder ...\Blackjack\Blackjack\bin\Release. 
