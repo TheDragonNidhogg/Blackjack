@@ -93,7 +93,7 @@ namespace Blackjack
         }
         public bool broke
         {
-            get { return (this.chips > 0); }
+            get { return (this.chips < 0 & this.bet == 0); }
         }
         public void AddChips(int n)
         {
@@ -265,6 +265,7 @@ namespace Blackjack
         {
             this.bet = n;
             this.chips -= n;
+            
         }
         public void ResetPlayer()
         {
@@ -576,12 +577,41 @@ namespace Blackjack
             {
                 Console.WriteLine("Instructions");
                 Console.WriteLine("------------------------------------------------------------------------");
+                Console.WriteLine("This is the game of Blackjack.");
+                Console.WriteLine("1. To start with each player and the dealer is dealt two cards. The Dealers");
+                Console.WriteLine("   second card will be hidden until after each player has finished.");
+                Console.WriteLine("2. After Looking at your cards you will be asked for make a bet from your");
+                Console.WriteLine("chips. You will start with 350 chips.");
+                Console.WriteLine("3. Each player will then be given a choice of options to make each turn. Enter");
+                Console.WriteLine("the Number of the option choose.");
+                Console.WriteLine("       <1> Hit: If you Hit, then you will be dealt an extra card. If your hand");
+                Console.WriteLine("           value is greater than 21, then you bust.");
+                Console.WriteLine("       <2> Stand: If you Stand, then you decide to keep your hand the way it is");
+                Console.WriteLine("           and wait for the dealer to reveal his cards.");
+                Console.WriteLine("       <3> Split: If you have two cards of equal value, then you create a second");
+                Console.WriteLine("           hand by removing one card and creating a second equal bet. ");
+                Console.WriteLine("       <4> Double: On the first turn you may choose to double your bet and be dealt");
+                Console.WriteLine("           an extra card.");
+                Console.WriteLine("4. Step 3 is then repeated on any split hands that were created.");
+                Console.WriteLine("5. The dealer is dealt cards until their hand value is greater than 17. If their end");
+                Console.WriteLine("hand value is greater than 21 the dealer busts.");
+                Console.WriteLine("6. The Results of the Game are made known.");
+                Console.WriteLine("        1. If the dealer busts, each player wins and gets back twice their bet");
+                Console.WriteLine("           in chips.");
+                Console.WriteLine("        2. If the dealer doesn't bust, each player with a lower hand value loses");
+                Console.WriteLine("           their bet.");
+                Console.WriteLine("        3. Each player who doesn't bust and has a high hand value gets back twice");
+                Console.WriteLine("           their bet in chips.");
+                Console.WriteLine("        4. If neither the dealer or the Player Bust and they have the same hand value,");
+                Console.WriteLine("           they push and the player gets back their bet.");
+                Console.WriteLine("7. The players can continue betting until they are out of chips.");
+                Console.WriteLine("Press Enter to Return to Menu...");
+                Console.ReadLine();
             }
 
             //This function starts the game with the potential for eventually enabling multiple players
             //Each player starts with 350 chips and are asked how many they would like to bet
             //Two Cards are dealt to each Player and the Dealer
-            //The Game continues to call Player_Turn for each player until they all Stand or Bust
             //Then the game has the dealer draw cards until the hand has a value of 17 or greater.
             //Each Player can Bust, Lose, Beat, or Tie the Dealers hand The game then puts all the cards in the discard Card list and clears the hands.
             //If the Deck is at 50% or less it is shuffled
@@ -628,34 +658,54 @@ namespace Blackjack
 
                     players = Each_Game(numofplayers, userinput, correctinput, players, deck);
 
-                    
+                    int playerswithchips = 0;
 
-                    Console.WriteLine("Do you want to play another round? <Y/N>:");
-                    userinput = Console.ReadLine();
-                    correctinput = false;
-                    while (correctinput)
+                    for(int i = 0; i<numofplayers; i++)
                     {
-                        if (userinput == "Y" | userinput == "y" | userinput == "N" | userinput == "n")
+                        if(players[i].Chips <= 0 )
                         {
-                            correctinput = true;
+                            playerswithchips++;
+                        }
+                        
+                    }
+                    if(playerswithchips==0)
+                    {
+                        Console.WriteLine("Do you want to play another round? <Y/N>:");
+                        userinput = Console.ReadLine();
+                        correctinput = false;
+                        while (correctinput)
+                        {
+                            if (userinput == "Y" | userinput == "y" | userinput == "N" | userinput == "n")
+                            {
+                                correctinput = true;
+                            }
+                            else
+                            {
+                                Console.WriteLine("Invalid Input. Please Enter Y or N:");
+                                userinput = Console.ReadLine();
+                            }
+                        }
+                        if (userinput == "N" | userinput == "n")
+                        {
+                            Console.WriteLine("Returning to Menu");
+                            Console.WriteLine("------------------------------------------------------------------------");
+                            playagain = false;
                         }
                         else
                         {
-                            Console.WriteLine("Invalid Input. Please Enter Y or N:");
-                            userinput = Console.ReadLine();
+                            Console.WriteLine("Preparing Next Game...");
+                            Console.WriteLine("------------------------------------------------------------------------");
                         }
                     }
-                    if (userinput == "N" | userinput == "n")
+                    else
                     {
+                        Console.WriteLine("All Players are out of Chips.");
+                        Console.WriteLine("------------------------------------------------------------------------");
                         Console.WriteLine("Returning to Menu");
                         Console.WriteLine("------------------------------------------------------------------------");
                         playagain = false;
                     }
-                    else
-                    {
-                        Console.WriteLine("Preparing Next Game...");
-                        Console.WriteLine("------------------------------------------------------------------------");
-                    }
+                    
                     for (int i = 0; i < numofplayers; i++)
                     {
                         usedcards.AddRange(players[i].player_hand.EmptyHand());
@@ -719,15 +769,17 @@ namespace Blackjack
 
                         int tempbet = 0;
                         Console.WriteLine(players[i].Name + ": You may bet up to " + players[i].Chips + ".");
-                        while (tempbet <= 0 | tempbet >= players[i].Chips)
+                        while (tempbet <= 0 | tempbet > players[i].Chips+1)
                         {
                             string temp = Console.ReadLine();
                             int x;
+                            Console.WriteLine("Make Bet");
                             if (int.TryParse(temp, out x))
                             {
-                                if (x > 0 & x <= players[i].Chips)
+                                if (x > 0 & x <= players[i].Chips+1)
                                 {
                                     tempbet = x;
+                                    
                                 }
                                 else
                                 {
@@ -738,6 +790,7 @@ namespace Blackjack
                             {
                                 Console.WriteLine("Invalid Selection. Try Again.");
                             }
+                            
                         }
                         players[i].MakeBet(tempbet);
                         Console.WriteLine(players[i].Name + " bet " + tempbet);
