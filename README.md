@@ -11,6 +11,7 @@ Microsoft Visual Studio Community 2019 Version 16.8.3
 ## Programming Language:
 C#
 ## Setup
+I have already build the project.
 To run this project, save the files to your PC. 
 Go to folder ...\Blackjack\Blackjack\bin\Release. 
 In that folder you will find Blackjack.exe. 
@@ -18,6 +19,7 @@ Running Blackjack.exe will start the game.
 
 ## Code
 If you wish to view the code, you may open the the project file named Blackjack at path ...\Blackjack in Microsoft Visual Studio Community 2019 Version 16.8.3
+If you wish to build it again, open the project file, click the build tab and select Build Blackjack.
 
 ## Features
 This Project is a game of Blackjack with all the basic features that entails. 
