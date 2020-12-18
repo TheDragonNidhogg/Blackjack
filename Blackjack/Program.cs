@@ -60,6 +60,7 @@ namespace Blackjack
     public class Player
     {
         public Hand player_hand;
+        public Hand unused;
         private int chips;
         private string name;
         public bool inround;
@@ -69,6 +70,8 @@ namespace Blackjack
         public int splitindex;
         public bool cansplit;
         public Hand split;
+        public bool insplit;
+        public bool donesplit;
         public Player()
         {
             this.player_hand = new Hand();
@@ -79,6 +82,9 @@ namespace Blackjack
             this.split = new Hand();
             this.bet = 0;
             this.splitbet = 0;
+            this.insplit = false;
+            this.donesplit = false;
+            this.unused = new Hand();
         }
         public string Name
         {
@@ -130,9 +136,9 @@ namespace Blackjack
             this.player_hand.AddCard(deck, 0);
 
             //Check for Split
-            for(int i = 0; i<this.player_hand.HandOfCards.Count-1; i++)
+            for(int i = 0; i<this.player_hand.HandOfCards.Count-2; i++)
             {
-                if (this.split.HandOfCards.Count == 0 & this.player_hand.HandOfCards.Last().Number == this.player_hand.HandOfCards[i].Number)
+                if (this.split.HandOfCards.Count == 0 & (this.CheckSplit()))
                 {
                     this.cansplit = true;
                     this.splitindex = this.player_hand.HandOfCards.Count - 1;
@@ -160,13 +166,15 @@ namespace Blackjack
         }
         public void Split()
         {
-            if (cansplit)
+            if (this.CheckSplit())
             {
-                this.split.HandOfCards.Add(this.player_hand.HandOfCards[splitindex]);
-                this.player_hand.HandOfCards.RemoveAt(this.splitindex);
+                this.split.AddCard(this.player_hand.HandOfCards[splitindex]);
+                this.player_hand.RemoveCard(splitindex);
                 Console.WriteLine(this.Name + " Split with " + split.HandOfCards[0].Name);
                 this.splitbet = this.bet;
                 this.chips -= this.splitbet;
+                this.cansplit = false;
+                this.insplit = true;
             }
         }
         public Deck Double(Deck deck)
@@ -190,12 +198,13 @@ namespace Blackjack
             Console.WriteLine(this.Name + " --- " + this.chips + " Chips --- Bet: " + this.bet);
             Console.Write("    Hand: ");
             this.player_hand.ReadHand(0, false);
-            if (split.HandOfCards.Count > 0)
+            if (this.split.HandOfCards.Count > 0)
             {
                 Console.Write("    Split: ");
                 this.split.ReadHand(0, false);
             }
         }
+
         public void PlayerResults(Hand dealer)
         {
             if (this.chips>0)
@@ -225,25 +234,25 @@ namespace Blackjack
                 }
                 if ((this.split.HandOfCards.Count() > 0 & this.split.GetValue(0) <= 21 & this.split.GetValue(0) > dealer.GetValue(0)) | (this.split.HandOfCards.Count() > 0 & dealer.GetValue(0)>21))
                 {
-                    Console.WriteLine(this.Name + "Split: Wins!");
+                    Console.WriteLine("Split: Wins!");
                     this.chips += splitbet*2;
                     this.splitbet = 0;
                 }
                 else if (this.split.HandOfCards.Count() > 0 & this.split.GetValue(0) == dealer.GetValue(0))
                 {
-                    Console.WriteLine(this.Name + "Split: Pushes!");
+                    Console.WriteLine("Split: Pushes!");
                     this.chips += splitbet;
                     this.splitbet = 0;
                 }
                 else if (this.split.HandOfCards.Count() > 0 & this.split.GetValue(0) > 21)
                 {
-                    Console.WriteLine(this.Name + "Split: Busts!");
+                    Console.WriteLine("Split: Busts!");
                     this.splitbet = 0;
 
                 }
                 else if (this.split.HandOfCards.Count() > 0)
                 {
-                    Console.WriteLine(this.Name + "Split: Loses!");
+                    Console.WriteLine("Split: Loses!");
                     this.splitbet = 0;
                 }
                 this.ReadPlayer();
@@ -259,14 +268,35 @@ namespace Blackjack
         }
         public void ResetPlayer()
         {
-            if (!this.broke)
-            {
-                this.inround = true;
-            }
-            this.splitindex = -1;
-            this.cansplit = false;
+            this.player_hand = new Hand();
+            this.inround = true;
+            this.splitindex = 0;
+            this.cansplit = true;
             this.split = new Hand();
             this.bet = 0;
+            this.splitbet = 0;
+            this.insplit = false;
+            this.donesplit = false;
+            this.unused = new Hand();
+        }
+        public bool CheckSplit()
+        {
+            List<int> numbers = new List<int>();
+            for (int i = 0; i < this.player_hand.HandOfCards.Count; i++)
+            {
+                numbers.Add(this.player_hand.HandOfCards[i].Number);
+
+            }
+            for (int i = 2; i < 15; i++)
+            {
+                
+                if (numbers.IndexOf(i) != numbers.LastIndexOf(i))
+                {
+                    
+                    return true;
+                }
+            }
+            return false;
         }
     }
     public class Hand
@@ -298,17 +328,24 @@ namespace Blackjack
         {
 
             int handvalue = 0;
-            int tempAces = 0;
+            int tempAces = this.aces;
             HandOfCards.ForEach(delegate (Card card)
             {
                 handvalue += card.Value;
                 //Console.WriteLine(card.Value);
                 //Console.WriteLine(card.Name);
             });
-            while (tempAces < this.aces & handvalue > 21)
+            while (handvalue > 21)
             {
-                tempAces++;
-                handvalue -= 10;
+                if (tempAces > 0)
+                {
+                    tempAces--;
+                    handvalue -= 10;
+                }
+                else
+                {
+                    break;
+                }
             }
             return handvalue;
 
@@ -343,7 +380,7 @@ namespace Blackjack
             }
             if (!(isdealeropening))
             {
-                Console.Write(this.GetValue(0));
+                Console.Write("Value: "+ this.GetValue(0));
             }
             Console.WriteLine();
 
@@ -359,25 +396,43 @@ namespace Blackjack
             }
             return false;
         }
-
+        public void RemoveCard(int i)
+        {
+            if (this.HandOfCards.ElementAt(i).Value == 11)
+            {
+                this.aces--;
+            }
+            this.HandOfCards.RemoveAt(i);
+            this.cardnum--;
+        }
+        public void AddCard(Card c)
+        {
+            if(c.Value == 11)
+            {
+                this.aces++;
+            }
+            this.HandOfCards.Add(c);
+            this.cardnum++;
+        }
+        
     }
     public class Card
     {
         private readonly int[] CardValue = new int[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11 };
         private readonly int[] CardNumber = new int[] { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
         private readonly string[] CardName = new string[] { "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King", "Ace" };
-        private readonly string[] CardSuit = new string[] { "Spades", "Clubs", "Diamonds", "Hearts" };
+        //private readonly string[] CardSuit = new string[] { "Spades", "Clubs", "Diamonds", "Hearts" };
 
         private string name;
         private int value;
-        private int suit;
+        //private int suit;
         private int number;
 
         public Card(int n, int s)
         {
-            this.name = CardName[n] + " of " + CardSuit[s];
+            this.name = CardName[n]; // + " of " + CardSuit[s];
             this.value = CardValue[n];
-            this.suit = s;
+            //this.suit = s;
             this.number = CardNumber[n];
         }
 
@@ -389,13 +444,13 @@ namespace Blackjack
         {
             get { return this.value; }
         }
-        public int Suit
-        {
-            get { return this.suit; }
-        }
+      //  public int Suit
+      //  {
+            //get { return this.suit; }
+       // }
         public int Number
         {
-            get { return number; }
+            get { return this.number; }
         }
         public bool Same(Card card)
         {
@@ -426,11 +481,27 @@ namespace Blackjack
                             while (playernum < 1 | playernum > 5)
                             {
                                 Console.WriteLine("How many people are playing? Enter a number between 1 and 5:");
-                                playernum = Convert.ToInt32(Console.ReadLine());
-                                if (playernum < 1 | playernum > 5)
+                                while (playernum < 1 | playernum > 5)
                                 {
-                                    Console.WriteLine("Invalid Input. Please Enter a Number between 1 and 5:");
+                                    string temp = Console.ReadLine();
+                                    int x;
+                                    if (int.TryParse(temp,out x))
+                                    {
+                                        if (x>0 & x<5)
+                                        {
+                                            playernum = x;
+                                        } else
+                                        {
+                                            Console.WriteLine("Invalid Selection. Try Again.");
+                                        }
+                                        
+                                        
 
+                                    } else
+                                    {
+                                        Console.WriteLine("Invalid Selection. Try Again.");
+                                    }
+                                    
                                 }
                             }
                             Console.WriteLine("------------------------------------------------------------------------");
@@ -478,15 +549,23 @@ namespace Blackjack
                 int userinput = 0;
                 while (!correct_selection)
                 {
-                    userinput = Convert.ToInt32(Console.ReadLine());
-                    if (userinput > 0 | userinput < 4)
+                    string temp = Console.ReadLine();
+                    int x;
+                    if (int.TryParse(temp, out x))
                     {
-                        correct_selection = true;
+                        if (x > 0 & x < 4)
+                        {
+                            userinput = x;
+                            correct_selection = true;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid Selection. Try Again.");
+                        }
                     }
                     else
                     {
-                        Console.WriteLine("Invalid Selection. Please Enter a Number between 1 and 3:");
-
+                        Console.WriteLine("Invalid Selection. Try Again.");
                     }
                 }
                 Console.WriteLine("------------------------------------------------------------------------");
@@ -507,18 +586,21 @@ namespace Blackjack
             //Each Player can Bust, Lose, Beat, or Tie the Dealers hand The game then puts all the cards in the discard Card list and clears the hands.
             //If the Deck is at 50% or less it is shuffled
             //The game then asks if it should go to another round. If so it does and if not it returns to the menu.
+            
+            
+            
             static void Main_Game(int numofplayers)
             {
+                List<Card> usedcards = new List<Card>();
                 bool playagain = true;
                 string userinput = "";
-                bool correctinput;
+                bool correctinput = false;
                 Console.WriteLine("------------------------------------------------------------------------");
                 Console.WriteLine("Game Setup");
                 Console.WriteLine("------------------------------------------------------------------------");
                 List<Player> players = new List<Player>();
-                Hand dealer = new Hand();
                 Deck deck = new Deck(4);
-                List<Card> usedcards = new List<Card>();
+
                 deck.Shuffle();
 
                 for (int i = 0; i < numofplayers; i++)
@@ -542,190 +624,233 @@ namespace Blackjack
                         deck.AddCards(usedcards);
                         deck.Shuffle();
                     }
-                    Console.WriteLine("Game Start");
-                    int playersinround = 0;
-                    for (int i = 0; i < numofplayers; i++) //This sets the number of players in the round and check to make sure they have Chips to Bet.
-                    {
-                        if (players[i].Chips > 0)
-                        {
-                            players[i].inround = true;
-                            playersinround++;
 
+
+                    players = Each_Game(numofplayers, userinput, correctinput, players, deck);
+
+                    
+
+                    Console.WriteLine("Do you want to play another round? <Y/N>:");
+                    userinput = Console.ReadLine();
+                    correctinput = false;
+                    while (correctinput)
+                    {
+                        if (userinput == "Y" | userinput == "y" | userinput == "N" | userinput == "n")
+                        {
+                            correctinput = true;
                         }
                         else
                         {
-                            players[i].inround = false;
+                            Console.WriteLine("Invalid Input. Please Enter Y or N:");
+                            userinput = Console.ReadLine();
                         }
                     }
-                    Console.WriteLine("Dealing Cards");
-                    for (int m = 0; m < 2; m++) //Loop to Deal out the Cards
+                    if (userinput == "N" | userinput == "n")
                     {
-                        dealer.AddCard(deck, 0); //Adds a Card to the dealer
-                        for (int i = 0; i < numofplayers; i++)//Adds a Card to each player in the round
+                        Console.WriteLine("Returning to Menu");
+                        Console.WriteLine("------------------------------------------------------------------------");
+                        playagain = false;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Preparing Next Game...");
+                        Console.WriteLine("------------------------------------------------------------------------");
+                    }
+                    for (int i = 0; i < numofplayers; i++)
+                    {
+                        usedcards.AddRange(players[i].player_hand.EmptyHand());
+                        usedcards.AddRange(players[i].split.EmptyHand());
+                    }
+                    usedcards.AddRange(players[0].unused.EmptyHand());
+                    for (int i = 0; i< numofplayers; i++)
+                    {
+                        players[i].ResetPlayer();
+                    }
+                }
+                //This function give displays the interface.
+                //The Interface will display the first Dealer card, two cards for the player whose turn it is and then give the player a selection from four possible options: Stand, Hit, Split, and Double
+                //The program will move onto one of those functions(aside from Stand) and then retun a bool of if the player is finished to Main_Game
+            }
+            static List<Player> Each_Game(int numofplayers, string userinput, bool correctinput, List<Player> players, Deck deck)
+            {
+                Hand dealer = new Hand();
+
+                Console.WriteLine("Game Start");
+                int playersinround = 0;
+                for (int i = 0; i < numofplayers; i++) //This sets the number of players in the round and check to make sure they have Chips to Bet.
+                {
+                    if (players[i].Chips > 0)
+                    {
+                        players[i].inround = true;
+                        playersinround++;
+
+                    }
+                    else
+                    {
+                        players[i].inround = false;
+                    }
+                }
+                Console.WriteLine("Dealing Cards");
+                for (int m = 0; m < 2; m++) //Loop to Deal out the Cards
+                {
+                    dealer.AddCard(deck, 0); //Adds a Card to the dealer
+                    for (int i = 0; i < numofplayers; i++)//Adds a Card to each player in the round
+                    {
+                        if (players[i].inround)
                         {
-                            if (players[i].inround)
-                            {
-                                players[i].player_hand.AddCard(deck, 0);
-                            }
-                            if(m == 1 & players[i].player_hand.HandOfCards[0] == players[i].player_hand.HandOfCards[1])
-                            {
-                                players[i].cansplit = true;
-                                players[i].splitindex = 1;
-                            }
+                            //deck.deckofcards[0] = new Card(12, 0);  //Used for Testing Split
+                            players[i].player_hand.AddCard(deck, 0);
+
 
                         }
+
+
                     }
-                    Console.WriteLine("------------------------------------------------------------------------");
-                    Console.WriteLine("Place Your Bets!");
-                    Console.WriteLine();
+                }
+
+
+                Console.WriteLine("------------------------------------------------------------------------");
+                Console.WriteLine("Place Your Bets!");
+                Console.WriteLine();
+                for (int i = 0; i < numofplayers; i++)
+                {
+                    if (players[i].inround)
+                    {
+
+                        int tempbet = 0;
+                        Console.WriteLine(players[i].Name + ": You may bet up to " + players[i].Chips + ".");
+                        while (tempbet <= 0 | tempbet >= players[i].Chips)
+                        {
+                            string temp = Console.ReadLine();
+                            int x;
+                            if (int.TryParse(temp, out x))
+                            {
+                                if (x > 0 & x <= players[i].Chips)
+                                {
+                                    tempbet = x;
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Invalid Selection. Try Again.");
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("Invalid Selection. Try Again.");
+                            }
+                        }
+                        players[i].MakeBet(tempbet);
+                        Console.WriteLine(players[i].Name + " bet " + tempbet);
+                        Console.WriteLine();
+
+                    }
+                }
+                Console.WriteLine("Showing Hands");
+                if (dealer.GetValue(0) == 21)
+                {
+                    for (int i = 0; i < numofplayers; i++)
+                    {
+                        if (!(players[i].broke))
+                        {
+
+                            players[i].PlayerResults(dealer);
+
+
+                            //Console.Write(" Value = " + players[i].player_hand.GetValue(0));
+                            //Console.WriteLine();
+                        }
+                    }
+                }
+                else
+                {
+                    Console.Write("Dealer: ");
+                    dealer.ReadHand(0, true);
                     for (int i = 0; i < numofplayers; i++)
                     {
                         if (players[i].inround)
                         {
 
-                            int tempbet = 0;
-                            Console.WriteLine(players[i].Name + ": You may bet up to " + players[i].Chips + ".");
-                            while (tempbet <= 0 | tempbet >= players[i].Chips)
-                            {
-                                Console.WriteLine("Please enter a number between 1 and " + players[i].Chips + ":");
-                                tempbet = Convert.ToInt32(Console.ReadLine());
-                                if (tempbet <= 0 | tempbet > players[i].Chips)
-                                {
-                                    Console.WriteLine("Invalid Selection. Try Again.");
-
-                                }
-                            }
-                            players[i].MakeBet(tempbet);
-                            Console.WriteLine(players[i].Name + " bet " + tempbet);
-                            Console.WriteLine();
-
+                            players[i].ReadPlayer();
+                            //Console.Write(" Value = " + players[i].player_hand.GetValue(0));
+                            //Console.WriteLine();
                         }
                     }
-                    Console.WriteLine("Showing Hands");
-                    if (dealer.GetValue(0) == 21)
+                    Console.WriteLine("------------------------------------------------------------------------");
+                    int finished = 0;
+                    int round = 0;
+                    List<int> activeplayerindex = new List<int>();
+                    for (int i = 0; i < numofplayers; i++)
                     {
-                        for (int i = 0; i < numofplayers; i++)
+                        if (players[i].inround)
                         {
-                            if (!(players[i].broke))
-                            {
-
-                                players[i].PlayerResults(dealer);
-                                
-
-                                //Console.Write(" Value = " + players[i].player_hand.GetValue(0));
-                                //Console.WriteLine();
-                            }
+                            activeplayerindex.Add(i);
                         }
                     }
-                    else
+                    while (activeplayerindex.Count > 0)
                     {
-                        Console.Write("Dealer: ");
-                        dealer.ReadHand(0, true);
-                        for (int i = 0; i < numofplayers; i++)
-                        {
-                            if (players[i].inround)
-                            {
+                        round++;
 
+
+                        activeplayerindex.ForEach(delegate (int i)
+                        {
+
+                            if (players[i].player_hand.GetValue(0) >= 21)
+                            {
+                                players[i].inround = false;
+                                finished++;
+                            }
+                            if (players[i].inround & players[i].player_hand.GetValue(0) < 21)
+                            {
+                                Console.Write("Dealer: ");
+                                dealer.ReadHand(0, true);
+                                Console.WriteLine("------------------------------------------------------------------------");
                                 players[i].ReadPlayer();
-                                //Console.Write(" Value = " + players[i].player_hand.GetValue(0));
-                                //Console.WriteLine();
-                            }
-                        }
-                        Console.WriteLine("------------------------------------------------------------------------");
-                        bool continues = true;
-                        int finished = 0;
-                        int round = 0;
-                        List<int> activeplayerindex = new List<int>();
-                        for (int i = 0; i < numofplayers; i++)
-                        {
-                            if (players[i].inround)
-                            {
-                                activeplayerindex.Add(i);
-                            }
-                        }
-                        while (activeplayerindex.Count>0)
-                        {
-                            round++;
-                            
-                            
-                            activeplayerindex.ForEach(delegate (int i)
-                            {
-
-                                if (players[i].player_hand.GetValue(0) >= 21)
+                                players[i].CheckSplit();
+                                Console.WriteLine(players[i].Name);
+                                Console.Write("Options: <1>Hit <2>Stand");
+                                
+                                
+                                if (round == 1)
                                 {
-                                    players[i].inround = false;
-                                    finished++;
+                                    if (players[i].CheckSplit())
+                                    {
+                                        Console.Write(" <3>Split");
+                                    }
+                                    Console.WriteLine(" <4>Double:");
                                 }
-                                if (players[i].inround & players[i].player_hand.GetValue(0) < 21)
+                                else
                                 {
-                                    Console.Write("Dealer: ");
-                                    dealer.ReadHand(0, true);
-                                    Console.WriteLine("------------------------------------------------------------------------");
-                                    players[i].ReadPlayer();
-                                    Console.WriteLine(players[i].Name);
-                                    Console.Write("Options: <1>Hit <2>Stand");
-                                    if (round == 1)
-                                    {
-                                        if (players[i].cansplit & players[i].split.HandOfCards.Count==0)
-                                        {
-                                            Console.Write(" <3>Split");
-                                        }
-                                        Console.WriteLine(" <4>Double:");
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine(":");
-                                    }
-                                    /*
-                                    if (round == 1)
-                                    {
-                                        if (players[i].CheckSplit() & players[i].split.HandOfCards.Count == 0)
-                                        {
-                                            Console.Write(" <3>Split");
-                                        }
-                                        Console.WriteLine(" <4>Double:");
+                                    Console.WriteLine(":");
+                                }
 
-
-                                    }
-                                    else
+                                string choice = "0";
+                                choice = Console.ReadLine();
+                                bool inputincorrect = true;
+                                while (inputincorrect)
+                                {
+                                    switch (choice)
                                     {
-                                        if (players[i].CheckSplit() & players[i].split.HandOfCards.Count == 0)
-                                        {
-                                            Console.WriteLine(" <3>Split:");
-                                        }
-                                        else
-                                        {
-                                            Console.WriteLine(":");
-                                        }
-                                    }
-                                    */
-                                    int choice = 0;
-                                    choice = Convert.ToInt32(Console.ReadLine());
-                                    bool inputincorrect = true;
-                                    while (inputincorrect)
-                                    {
-                                        switch (choice)
-                                        {
-                                            case 1:
-                                                deck = players[i].Hit(deck);
-                                                if (players[i].player_hand.GetValue(0) >= 21)
-                                                {
-                                                    players[i].inround = false;
-                                                    finished++;
-                                                }
-                                                inputincorrect = false;
-                                                Console.WriteLine("------------------------------------------------------------------------");
-                                                break;
-                                            case 2:
+                                        case "1":
+                                            deck = players[i].Hit(deck);
+                                            if (players[i].player_hand.GetValue(0) >= 21)
+                                            {
                                                 players[i].inround = false;
                                                 finished++;
-                                                Console.WriteLine(players[i].Name + " Stand");
-                                                Console.WriteLine("------------------------------------------------------------------------");
-                                                inputincorrect = false;
-                                                break;
-                                            /*
-                                        case 3:
-                                            if (players[i].CheckSplit())
+                                            }
+
+                                            inputincorrect = false;
+                                            Console.WriteLine("------------------------------------------------------------------------");
+                                            break;
+                                        case "2":
+                                            players[i].inround = false;
+                                            finished++;
+                                            Console.WriteLine(players[i].Name + " Stand");
+                                            Console.WriteLine("------------------------------------------------------------------------");
+                                            inputincorrect = false;
+                                            break;
+
+                                        case "3":
+                                            if (players[i].CheckSplit() & players[i].split.HandOfCards.Count == 0)
                                             {
                                                 players[i].Split();
                                                 inputincorrect = false;
@@ -733,188 +858,167 @@ namespace Blackjack
                                             else
                                             {
                                                 Console.WriteLine("Invalid Selection. Try Again.");
-                                                choice = Convert.ToInt32(Console.ReadLine());
+                                                choice = Console.ReadLine();
                                                 break;
                                             }
                                             break;
-                                            */
-                                            case 3:
-                                                if (round == 1)
-                                                {
-                                                    deck = players[i].Double(deck);
-                                                    inputincorrect = false;
-                                                }
-                                                else
-                                                {
-                                                    Console.WriteLine("Invalid Selection. Try Again.");
-                                                    choice = Convert.ToInt32(Console.ReadLine());
-                                                    break;
-                                                }
-                                                break;
-                                            default:
-                                                Console.WriteLine("Invalid Selection. Try Again.");
-                                                choice = Convert.ToInt32(Console.ReadLine());
-                                                break;
-                                        }
-                                    }
-                                    Console.WriteLine("------------------------------------------------------------------------");
-                                }
-                            });
 
-
-                            /*
-                            Console.WriteLine("Split Hands");
-                            Console.WriteLine("------------------------------------------------------------------------");
-                            //Split Hands
-                            List<int> splitPlayerIndexes = new List<int>();
-                            for (int i = 0; i < numofplayers; i++)
-                            {
-                                if (players[i].split.HandOfCards.Count > 0)
-                                {
-                                    splitPlayerIndexes.Add(i);
-                                    players[i].inround = true;
-                                }
-                            }
-                            if (splitPlayerIndexes.Count > 0)
-                            {
-                                continues = true;
-                                finished = 0;
-                                while (continues)
-                                {
-                                    round++;
-                                    splitPlayerIndexes.ForEach(delegate (int i)
-                                    {
-                                        if (players[i].inround & players[i].split.GetValue(0) < 21)
-                                        {
-                                            Console.Write("Dealer: ");
-                                            dealer.ReadHand(0, true);
-                                            Console.WriteLine("------------------------------------------------------------------------");
-                                            players[i].ReadPlayer();
-                                            Console.WriteLine("------------------------------------------------------------------------");
-                                            Console.WriteLine(players[i].Name);
-                                            Console.WriteLine();
-                                            Console.Write("<1>Hit <2>Stand");
-                                            int choice = 0;
-                                            choice = Convert.ToInt32(Console.ReadLine());
-                                            bool inputincorrect = true;
-                                            while (inputincorrect)
+                                        case "4":
+                                            if (round == 1)
                                             {
-                                                switch (choice)
-                                                {
-                                                    case 1:
-                                                        deck = players[i].HitSplit(deck);
-                                                        if (players[i].split.GetValue(0) >= 21)
-                                                        {
-                                                            players[i].inround = false;
-                                                            finished++;
-                                                        }
-                                                        inputincorrect = false;
-                                                        Console.WriteLine("------------------------------------------------------------------------");
-                                                        break;
-                                                    case 2:
-                                                        players[i].inround = false;
-                                                        finished++;
-                                                        Console.WriteLine(players[i].Name + " Stand");
-                                                        Console.WriteLine("------------------------------------------------------------------------");
-                                                        inputincorrect = false;
-                                                        break;
-                                                    default:
-                                                        Console.WriteLine("Invalid Selection. Try Again.");
-                                                        choice = Convert.ToInt32(Console.ReadLine());
-                                                        break;
-                                                }
+                                                deck = players[i].Double(deck);
+                                                inputincorrect = false;
                                             }
-                                        }
-                                    });
+                                            else
+                                            {
+                                                Console.WriteLine("Invalid Selection. Try Again.");
+                                                choice = Console.ReadLine();
+                                                break;
+                                            }
+                                            break;
+                                        default:
+                                            Console.WriteLine("Invalid Selection. Try Again.");
+                                            choice = Console.ReadLine();
+                                            break;
+                                    }
                                 }
-                            }
-                            
 
-
-                            */
-
-                            activeplayerindex = new List<int>();
-                            for (int i = 0; i < numofplayers; i++)
-                            {
-                                if (players[i].inround)
-                                {
-                                    activeplayerindex.Add(i);
-                                }
-                            }
-
-                        }
-                        
-                        while (dealer.GetValue(0) < 17)
-                         {
-                                dealer.AddCard(deck, 0);
-                                Console.Write("Dealer: ");
-                                dealer.ReadHand(0, false);
                                 Console.WriteLine("------------------------------------------------------------------------");
-                         }
-
-                        Console.WriteLine("Results");
-                        Console.WriteLine("------------------------------------------------------------------------");
-                        Console.Write("Dealer: ");
-                        dealer.ReadHand(0, false);
-                        players.ForEach(delegate (Player player)
-                        {
-                            player.PlayerResults(dealer);
-                            player.ResetPlayer();
+                            }
                         });
 
 
-                        Console.WriteLine("------------------------------------------------------------------------");
-                        Console.WriteLine("Game Finish");
-                        Console.WriteLine("------------------------------------------------------------------------");
 
+
+
+
+
+
+
+                        activeplayerindex = new List<int>();
                         for (int i = 0; i < numofplayers; i++)
                         {
-                            usedcards.AddRange(players[i].player_hand.EmptyHand());
-                        }
-                        usedcards.AddRange(dealer.EmptyHand());
-                        
-                        Console.WriteLine("Do you want to play another round? <Y/N>:");
-                        userinput = Console.ReadLine();
-                        correctinput = false;
-                        while (correctinput)
-                        {
-                            if (userinput == "Y" | userinput == "y" | userinput == "N" | userinput == "n")
+                            if (players[i].inround)
                             {
-                                correctinput = true;
+                                activeplayerindex.Add(i);
                             }
-                            else
-                            {
-                                Console.WriteLine("Invalid Input. Please Enter Y or N:");
-                                userinput = Console.ReadLine();
-                            }
-                        }
-                        if (userinput == "N" | userinput == "n")
-                        {
-                            Console.WriteLine("Returning to Menu");
-                            Console.WriteLine("------------------------------------------------------------------------");
-                            playagain = false;
-                        }
-                        else
-                        {
-                            Console.WriteLine("Preparing Next Game...");
-                            Console.WriteLine("------------------------------------------------------------------------");
                         }
 
                     }
+
+
+                    Console.WriteLine("Split Hands");
+                    Console.WriteLine("------------------------------------------------------------------------");
+                    //Split Hands
+
+                    activeplayerindex = new List<int>();
+                    for (int i = 0; i < numofplayers; i++)
+                    {
+                        if (players[i].insplit)
+                        {
+                            activeplayerindex.Add(i);
+                        }
+                    }
+                    while (activeplayerindex.Count > 0)
+                    {
+                        round++;
+
+
+                        activeplayerindex.ForEach(delegate (int i)
+                        {
+
+                            if (players[i].split.GetValue(0) >= 21)
+                            {
+                                players[i].insplit = false;
+                                players[i].donesplit = true;
+                                //finished++;
+                            }
+                            if (players[i].insplit & players[i].split.GetValue(0) < 21)
+                            {
+                                Console.Write("Dealer: ");
+                                dealer.ReadHand(0, true);
+                                Console.WriteLine("------------------------------------------------------------------------");
+                                players[i].ReadPlayer();
+                                Console.WriteLine(players[i].Name);
+                                Console.WriteLine("Options: <1>Hit <2>Stand:");
+
+                                string choice = "0";
+                                choice = Console.ReadLine();
+                                bool inputincorrect = true;
+                                while (inputincorrect)
+                                {
+                                    switch (choice)
+                                    {
+                                        case "1":
+                                            deck = players[i].HitSplit(deck);
+                                            if (players[i].split.GetValue(0) >= 21)
+                                            {
+                                                players[i].insplit = false;
+                                                players[i].donesplit = true;
+                                                //finished++;
+                                            }
+                                            inputincorrect = false;
+                                            Console.WriteLine("------------------------------------------------------------------------");
+                                            break;
+                                        case "2":
+                                            players[i].insplit = false;
+                                            players[i].donesplit = true;
+                                            //finished++;
+                                            Console.WriteLine(players[i].Name + " Stand");
+                                            Console.WriteLine("------------------------------------------------------------------------");
+                                            inputincorrect = false;
+                                            break;
+                                        default:
+                                            Console.WriteLine("Invalid Selection. Try Again.");
+                                            choice = Console.ReadLine();
+                                            break;
+                                    }
+                                }
+                                Console.WriteLine("------------------------------------------------------------------------");
+                            }
+                        });
+                        activeplayerindex = new List<int>();
+                        for (int i = 0; i < numofplayers; i++)
+                        {
+                            if (players[i].insplit)
+                            {
+                                activeplayerindex.Add(i);
+                            }
+                        }
+                    }
+
+
+                    while (dealer.GetValue(0) < 17)
+                    {
+                        dealer.AddCard(deck, 0);
+                        Console.Write("Dealer: ");
+                        dealer.ReadHand(0, false);
+                        Console.WriteLine("------------------------------------------------------------------------");
+                    }
+
+                    Console.WriteLine("Results");
+                    Console.WriteLine("------------------------------------------------------------------------");
+                    Console.Write("Dealer: ");
+                    dealer.ReadHand(0, false);
+                    players.ForEach(delegate (Player player)
+                    {
+                        player.PlayerResults(dealer);
+                        
+                    });
+
+
+                    Console.WriteLine("------------------------------------------------------------------------");
+                    Console.WriteLine("Game Finish");
+                    Console.WriteLine("------------------------------------------------------------------------");
+
+                    
+
+                    players[0].unused = dealer;
                 }
-                //This function give displays the interface.
-                //The Interface will display the first Dealer card, two cards for the player whose turn it is and then give the player a selection from four possible options: Stand, Hit, Split, and Double
-                //The program will move onto one of those functions(aside from Stand) and then retun a bool of if the player is finished to Main_Game
-                static int Player_Turn(int playernum, int turnnum, Player player, Deck deck)
-                {
-                    int move = 0;
-
-
-
-                    return move;
-                }
-
+                return players;
             }
+
+        
         }
     }
 }
