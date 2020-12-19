@@ -116,6 +116,13 @@ namespace Blackjack
             get { return this.chips; }
             set { this.chips = value; }
         }
+
+        public int Bet
+        {
+            get { return this.bet; }
+            set { this.bet = value; }
+        }
+
         public void SetBet(int amount)
         {
             if (amount <= this.chips)
@@ -863,7 +870,7 @@ namespace Blackjack
                                 Console.Write("Options: <1>Hit <2>Stand");
                                 
                                 
-                                if (round == 1)
+                                if (round == 1 & players[i].Chips >= players[i].Bet)
                                 {
                                     if (players[i].CheckSplit())
                                     {
@@ -877,7 +884,7 @@ namespace Blackjack
                                 }
                                 else
                                 {
-                                    if (players[i].CheckSplit())
+                                    if (players[i].CheckSplit() & players[i].Chips >= players[i].Bet)
                                     {
                                         Console.Write(" <3>Split");
                                     }
@@ -911,7 +918,7 @@ namespace Blackjack
                                             break;
 
                                         case "3":
-                                            if (players[i].CheckSplit() & players[i].split.HandOfCards.Count == 0)
+                                            if (players[i].CheckSplit() & players[i].split.HandOfCards.Count == 0 & players[i].Chips >= players[i].Bet)
                                             {
                                                 players[i].Split();
                                                 inputincorrect = false;
@@ -925,7 +932,7 @@ namespace Blackjack
                                             break;
 
                                         case "4":
-                                            if (round == 1)
+                                            if (round == 1 & players[i].Chips >= players[i].Bet)
                                             {
                                                 deck = players[i].Double(deck);
                                                 inputincorrect = false;

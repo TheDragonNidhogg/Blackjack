@@ -10,3 +10,4 @@ C:\Users\Davis\source\repos\Blackjack\Blackjack\obj\Release\netcoreapp3.1\Blackj
 C:\Users\Davis\source\repos\Blackjack\Blackjack\obj\Release\netcoreapp3.1\Blackjack.dll
 C:\Users\Davis\source\repos\Blackjack\Blackjack\obj\Release\netcoreapp3.1\Blackjack.pdb
 C:\Users\Davis\source\repos\Blackjack\Blackjack\obj\Release\netcoreapp3.1\Blackjack.genruntimeconfig.cache
+C:\Users\Davis\source\repos\Blackjack\Blackjack\obj\Release\netcoreapp3.1\Blackjack.csprojAssemblyReference.cache
